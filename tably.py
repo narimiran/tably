@@ -205,7 +205,9 @@ def arg_parser():
     )
     return parser.parse_args()
 
-
-if __name__ == '__main__':
+def main():
     options = arg_parser()
     run(**vars(options))
+    
+if __name__ == '__main__':
+    main()
