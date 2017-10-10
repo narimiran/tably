@@ -54,9 +54,14 @@ def add_caption(caption, indent):
 
 def create_row(line, indent):
     """Creates a row based on `line` content"""
+    def escape(line):
+        for char in '#$%&_}{':
+            line = [column.replace(char, '\\'+char) for column in line]
+        return line
+
     return r'{indent}{indent}{content} \\'.format(
               indent=indent,
-              content=' & '.join(line))
+              content=' & '.join(escape(line)))
 
 
 def create_table(file, no_header, label, caption, align, indent, skip):
