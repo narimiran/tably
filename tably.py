@@ -33,16 +33,17 @@ class Tably:
         """
         Attributes:
             files (string): name(s) of the .csv file(s)
-            no_header (bool): if the .csv contains only content, without a
-                header (names for the columns)
-            label (string): a label by which the table can be referenced
-            caption (string): the name of the table, printed above it
             align (string): wanted alignment of the columns
+            caption (string): the name of the table, printed above it
             indent (bool): should a LaTeX code be indented with 4 spaces per
                 code block. Doesn't affect the final looks of the table.
+            label (string): a label by which the table can be referenced
+            no_header (bool): if the .csv contains only content, without a
+                header (names for the columns)
             outfile (string): name of the file where to save the results.
+            preamble(bool): create a preamble
+            sep (string): column separator
             skip (int): number of rows in .csv to skip
-            whole (bool): creating of a whole .tex document (including the preamble)
         """
         self.files = args.files
         self.no_header = args.no_header
@@ -53,6 +54,7 @@ class Tably:
         self.outfile = args.outfile
         self.skip = args.skip
         self.preamble = args.preamble
+        self.sep = get_sep(args.sep)
 
     def run(self):
         """The main method.
@@ -92,10 +94,12 @@ class Tably:
 
         try:
             with open(file) as infile:
-                for i, line in enumerate(csv.reader(infile)):
+                for i, line in enumerate(infile.readlines()):
                     if i < self.skip:
                         continue
-                    rows.append(create_row(line, indent))
+                    line = line.strip()
+                    columns = line.split(self.sep)
+                    rows.append(create_row(columns, indent))
         except FileNotFoundError:
             print("File {} doesn't exist!!\n".format(file))
             return ''
@@ -106,12 +110,23 @@ class Tably:
         header = HEADER.format(
             label=add_label(self.label, indent),
             caption=add_caption(self.caption, indent),
-            align=format_alignment(self.align, len(line)),
+            align=format_alignment(self.align, len(columns)),
             indent=indent,
         )
         content = '\n'.join(rows)
         footer = FOOTER.format(indent=indent)
         return '\n'.join((header, content, footer))
+
+
+def get_sep(sep):
+    if sep.lower() in ['t', 'tab', '\\t']:
+        return '\t'
+    elif sep.lower() in ['s', 'semi', ';']:
+        return ';'
+    elif sep.lower() in ['c', 'comma', ',']:
+        return ','
+    else:
+        return sep
 
 
 def format_alignment(align, length):
@@ -198,6 +213,12 @@ def arg_parser():
              'slightly more readable. Default: False'
     )
     parser.add_argument(
+        '-k', '--skip',
+        type=int,
+        default=0,
+        help='Number of rows in .csv to skip. Default: 0'
+    )
+    parser.add_argument(
         '-l', '--label',
         help='Label of the table, for referencing it. Default: None'
     )
@@ -221,10 +242,12 @@ def arg_parser():
              'Default: False'
     )
     parser.add_argument(
-        '-s', '--skip',
-        type=int,
-        default=0,
-        help='Number of rows in .csv to skip. Default: 0'
+        '-s', '--sep',
+        default=',',
+        help=r'Choose a separator between columns. If a file is tab-separated, '
+             r'pass `t` or `tab`. If a file is semicolon-separated, '
+             r'pass `s`, `semi` or `\;`.'
+             r'Default: `,` (comma-separated)'
     )
     return parser.parse_args()
 

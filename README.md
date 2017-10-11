@@ -23,7 +23,8 @@ It uses `booktabs` package for creating the tables (nicer looking tables than th
 
 For a test run all you need to do is download the file [`tably.py`](tably.py) and put it in the directory where you would like to use it.
 
-If you wish to use it repeatedly, a good idea would be to make it executable and add it to your $PATH, which simplifies usage. (Then you can call it from any directory just by `tably filename.csv [arguments]`)
+If you wish to use it repeatedly, a good idea would be to make it executable and add it to your $PATH, which simplifies usage.
+(Then you can call it from any directory just by `tably filename.csv [arguments]`, as shown in the following examples, otherwise you need to call it by `python tably.py filename.csv [arguments]`)
 
 
 # Usage
@@ -32,7 +33,7 @@ See the folder [examples](examples/) for the input files used in the following e
 
 The most basic example:
 ```bash
-$ python tably.py examples/example1.csv
+$ tably examples/example1.csv
 ```
 
 outputs to console:
@@ -62,13 +63,13 @@ If you want to create a new file, you probably want to include a preamble too (s
 
 All options can be seen by using `-h` or `--help`:
 ```bash
-$ python tably.py -h
+$ tably -h
 ```
 
 ```
-usage: tably.py [-h] [-a ALIGN] [-c CAPTION] [-i] [-l LABEL] [-n] [-o OUTFILE]
-                [-p] [-s SKIP]
-                files [files ...]
+usage: tably [-h] [-a ALIGN] [-c CAPTION] [-i] [-k SKIP] [-l LABEL] [-n]
+             [-o OUTFILE] [-p] [-s SEP]
+             files [files ...]
 
 Creates LaTeX tables from .csv files
 
@@ -87,6 +88,7 @@ optional arguments:
   -i, --indent          Indents LaTeX source code with 4 spaces per float. No
                         difference in the final result, just LaTeX code is
                         slightly more readable. Default: False
+  -k SKIP, --skip SKIP  Number of rows in .csv to skip. Default: 0
   -l LABEL, --label LABEL
                         Label of the table, for referencing it. Default: None
   -n, --no-header       By default, the first row of .csv is used as a table
@@ -99,7 +101,10 @@ optional arguments:
   -p, --preamble        If selected, makes a whole .tex document (including
                         the preamble) ready to be built as .pdf. Useful when
                         trying to make a quick report. Default: False
-  -s SKIP, --skip SKIP  Number of rows in .csv to skip. Default: 0
+  -s SEP, --sep SEP     Choose a separator between columns. If a file is tab-
+                        separated, pass `t` or `tab`. If a file is semicolon-
+                        separated, pass `s`, `semi` or `\;`.Default: `,`
+                        (comma-separated)
 ```
 
 ---
@@ -107,7 +112,7 @@ optional arguments:
 More complex examples:
 
 ```bash
-$ python tably.py examples/example1.csv -o examples/table1.tex -p -i -a lrrr -l tab:ex1 -c "Prices of breakfasts"
+$ tably examples/example1.csv -o examples/table1.tex -p -i -a lrrr -l tab:ex1 -c "Prices of breakfasts"
 ```
 
 Saves the output (`-o`) to [examples/table1.tex](examples/table1.tex) file, containing a preamble (`-p`), where contents are indented (`-i`), alignment of the columns (`-a`) in the table is left-right-right-right (`lrrr`) , table label (`-l`) is `tab:ex1` and the caption (`-c`) is `Prices of breakfasts`.
@@ -116,10 +121,10 @@ The final result is at [examples/table1.pdf](examples/table1.pdf).
 ---
 
 ```bash
-$ python tably.py examples/example2.csv -o examples/table2.tex -p -i -a r -n -s 3
+$ tably examples/example2.csv -o examples/table2.tex -p -i -a r -n -k 3
 ```
 
-Here the alignment for a whole table is right (`-a r`), there is no header (`-n`) and we skip first three rows of .csv file (`-s 3`).
+Here the alignment for a whole table is right (`-a r`), there is no header (`-n`) and we skip first three rows of .csv file (`-k 3`).
 The final result is at [examples/table2.pdf](examples/table2.pdf).
 
 
