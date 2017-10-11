@@ -51,7 +51,7 @@ class Tably:
         self.label = args.label
         self.caption = args.caption
         self.align = args.align
-        self.indent = args.indent
+        self.no_indent = args.no_indent
         self.outfile = args.outfile
         self.skip = args.skip
         self.preamble = args.preamble
@@ -92,7 +92,7 @@ class Tably:
         The method `run` calls this method.
         """
         rows = []
-        indent = 4*' ' if self.indent else ''
+        indent = 4*' ' if not self.no_indent else ''
 
         try:
             with open(file) as infile:
@@ -224,11 +224,11 @@ def arg_parser():
              'Default: None'
     )
     parser.add_argument(
-        '-i', '--indent',
+        '-i', '--no-indent',
         action='store_true',
-        help='Indents LaTeX source code with 4 spaces per float. '
-             'No difference in the final result, just LaTeX code is '
-             'slightly more readable. Default: False'
+        help='Pass this if you do not want to indent LaTeX source code '
+             'with 4 spaces per float. No difference in the final result (pdf). '
+             'Default: False'
     )
     parser.add_argument(
         '-k', '--skip',

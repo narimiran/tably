@@ -49,18 +49,18 @@ outputs to console:
 % \usepackage{booktabs} % move this to preamble and uncomment
 
 \begin{table}[htb]
-\centering
-\begin{tabular}{@{}cccc@{}}
-\toprule
-Name & Qty & Price per kg & Price \\
-\midrule
-Apples & 10.2 & 5 & 51.0 \\
-Bananas & 7.3 & 11 & 80.3 \\
-Cherries & 5.7 & 30 & 171.0 \\
-Dates & 3.5 & 90 & 315.0 \\
-Eggs & 6.4 & 2 & 12.8 \\
-\bottomrule
-\end{tabular}
+    \centering
+    \begin{tabular}{@{}cccc@{}}
+        \toprule
+        Name & Qty & Price per kg & Price \\
+        \midrule
+        Apples & 10.2 & 5 & 51.0 \\
+        Bananas & 7.3 & 11 & 80.3 \\
+        Cherries & 5.7 & 30 & 171.0 \\
+        Dates & 3.5 & 90 & 315.0 \\
+        Eggs & 6.4 & 2 & 12.8 \\
+        \bottomrule
+    \end{tabular}
 \end{table}
 ```
 which is ready to be copied to your existing LaTeX document.
@@ -93,9 +93,9 @@ optional arguments:
                         column. Default: c
   -c CAPTION, --caption CAPTION
                         Caption of the table. Default: None
-  -i, --indent          Indents LaTeX source code with 4 spaces per float. No
-                        difference in the final result, just LaTeX code is
-                        slightly more readable. Default: False
+  -i, --no-indent       Pass this if you do not want to indent LaTeX source
+                        code with 4 spaces per float. No difference in the
+                        final result (pdf). Default: False
   -k SKIP, --skip SKIP  Number of rows in .csv to skip. Default: 0
   -l LABEL, --label LABEL
                         Label of the table, for referencing it. Default: None
@@ -124,16 +124,16 @@ optional arguments:
 More complex examples:
 
 ```bash
-$ tably examples/example1.csv -o examples/table1.tex -p -i -a lrcr -u / kg $ $ -l tab:ex1 -c "Prices of breakfasts"
+$ tably examples/example1.csv -o examples/table1.tex -p -a lrcr -u / kg $ $ -l tab:ex1 -c "Prices of breakfasts"
 ```
 
-Saves the output (`-o`) to [examples/table1.tex](examples/table1.tex) file, containing a preamble (`-p`), where contents are indented (`-i`), alignment of the columns (`-a`) in the table is left-right-center-right (`lrcr`), units (`-u`) for each column are provided (`/` represents no unit, same as `0` and `-`), table label (`-l`) is `tab:ex1` and the caption (`-c`) is `Prices of breakfasts`.
+Saves the output (`-o`) to [examples/table1.tex](examples/table1.tex) file, containing a preamble (`-p`), alignment of the columns (`-a`) in the table is left-right-center-right (`lrcr`), units (`-u`) for each column are provided (`/` represents no unit, same as `0` and `-`), table label (`-l`) is `tab:ex1` and the caption (`-c`) is `Prices of breakfasts`.
 The final result is at [examples/table1.pdf](examples/table1.pdf).
 
 ---
 
 ```bash
-$ tably examples/example2.csv -o examples/table2.tex -p -i -a r -n -k 3
+$ tably examples/example2.csv -o examples/table2.tex -p -a r -n -k 3
 ```
 
 Here the alignment for a whole table is right (`-a r`), there is no header (`-n`) and we skip first three rows of .csv file (`-k 3`).
