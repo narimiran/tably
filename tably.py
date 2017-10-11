@@ -21,6 +21,99 @@ LABEL = '\n{indent}\\label{{{label}}}'
 CAPTION = '\n{indent}\\caption{{{caption}}}'
 
 
+class Tably:
+    """Object which holds parsed arguments.
+
+    Methods:
+        run: creates a LaTeX code/file
+        create_table: for each specified file, creates a LaTeX table
+    """
+
+    def __init__(self, args):
+        """
+        Attributes:
+            files (string): name(s) of the .csv file(s)
+            no_header (bool): if the .csv contains only content, without a
+                header (names for the columns)
+            label (string): a label by which the table can be referenced
+            caption (string): the name of the table, printed above it
+            align (string): wanted alignment of the columns
+            indent (bool): should a LaTeX code be indented with 4 spaces per
+                code block. Doesn't affect the final looks of the table.
+            outfile (string): name of the file where to save the results.
+            skip (int): number of rows in .csv to skip
+            whole (bool): creating of a whole .tex document (including the preamble)
+        """
+        self.files = args.files
+        self.no_header = args.no_header
+        self.label = args.label
+        self.caption = args.caption
+        self.align = args.align
+        self.indent = args.indent
+        self.outfile = args.outfile
+        self.skip = args.skip
+        self.preamble = args.preamble
+
+    def run(self):
+        """The main method.
+
+        For each file in `files`, calls `create_table` method.
+        If `outfile` is provided, calls `save_content` function,
+        otherwise prints to the console.
+        """
+        if self.preamble:
+            all_tables = [PREAMBLE]
+        else:
+            all_tables = ['\n% \\usepackage{booktabs} % move this to preamble and uncomment']
+        if self.label and len(self.files) > 1:
+            all_tables.append("% don't forget to manually re-label the tables")
+        for file in self.files:
+            table = self.create_table(file)
+            all_tables.append(table)
+        if self.preamble:
+            all_tables.append(r'\end{document}')
+
+        final_content = '\n\n'.join(all_tables)
+        if self.outfile:
+            try:
+                save_content(final_content, self.outfile)
+            except FileNotFoundError:
+                print('{} is not a valid/known path. Could not save there.'.format(self.outfile))
+        else:
+            print(final_content)
+
+    def create_table(self, file):
+        """Creates a table from a given .csv file.
+
+        The method `run` calls this method.
+        """
+        rows = []
+        indent = 4*' ' if self.indent else ''
+
+        try:
+            with open(file) as infile:
+                for i, line in enumerate(csv.reader(infile)):
+                    if i < self.skip:
+                        continue
+                    rows.append(create_row(line, indent))
+        except FileNotFoundError:
+            print("File {} doesn't exist!!\n".format(file))
+            return ''
+
+        if not self.no_header:
+            rows.insert(1, r'{0}{0}\midrule'.format(indent))
+
+        header = HEADER.format(
+            label=add_label(self.label, indent),
+            caption=add_caption(self.caption, indent),
+            align=format_alignment(self.align, len(line)),
+            indent=indent,
+        )
+        content = '\n'.join(rows)
+        footer = FOOTER.format(indent=indent)
+        return '\n'.join((header, content, footer))
+
+
 def format_alignment(align, length):
     """Makes sure that provided alignment is valid:
     1. the length of alignment is either 1 or the same as the number of columns
@@ -64,39 +157,6 @@ def create_row(line, indent):
               content=' & '.join(escape(line)))
 
 
-def create_table(file, no_header, label, caption, align, indent, skip):
-    """Creates a table from a given .csv file.
-
-    The function `run` calls this function. See its docstring for more
-    information about the arguments.
-    """
-    rows = []
-    indent = 4*' ' if indent else ''
-
-    try:
-        with open(file) as infile:
-            for i, line in enumerate(csv.reader(infile)):
-                if i < skip:
-                    continue
-                rows.append(create_row(line, indent))
-    except FileNotFoundError:
-        print("File {} doesn't exist!!\n".format(file))
-        return ''
-
-    if not no_header:
-        rows.insert(1, r'{0}{0}\midrule'.format(indent))
-
-    header = HEADER.format(
-        label=add_label(label, indent),
-        caption=add_caption(caption, indent),
-        align=format_alignment(align, len(line)),
-        indent=indent,
-    )
-    content = '\n'.join(rows)
-    footer = FOOTER.format(indent=indent)
-    return '\n'.join((header, content, footer))
-
-
 def save_content(content, outfile):
     """Saves the content to a file.
 
@@ -106,48 +166,6 @@ def save_content(content, outfile):
     with open(outfile, 'a') as out:
         out.writelines(content)
     print('The content is added to', outfile)
-
-
-def run(files, no_header, label, caption, align, indent, outfile, skip, preamble):
-    """The main function.
-
-    For each file in `files`, calls `create_table` funtion.
-    If `outfile` is provided, calls `save_content` function,
-    otherwise prints to the console.
-
-    Args:
-        file (string): name of the .csv file
-        no_header (bool): if the .csv contains only content, without a
-            header (names for the columns)
-        label (string): a label by which the table can be referenced
-        caption (string): the name of the table, printed above it
-        align (string): wanted alignment of the columns
-        indent (bool): should a LaTeX code be indented with 4 spaces per
-            code block. Doesn't affect the final looks of the table.
-        outfile (string): name of the file where to save the results.
-        skip (int): number of rows in .csv to skip
-        whole (bool): creating of a whole .tex document (including the preamble)
-    """
-    if preamble:
-        all_tables = [PREAMBLE]
-    else:
-        all_tables = ['\n% \\usepackage{booktabs} % move this to preamble and uncomment']
-    if label and len(files) > 1:
-        all_tables.append("% don't forget to manually re-label the tables")
-    for file in files:
-        table = create_table(file, no_header, label, caption, align, indent, skip)
-        all_tables.append(table)
-    if preamble:
-        all_tables.append(r'\end{document}')
-
-    final_content = '\n\n'.join(all_tables)
-    if outfile:
-        try:
-            save_content(final_content, outfile)
-        except FileNotFoundError:
-            print('{} is not a valid/known path. Could not save there.'.format(outfile))
-    else:
-        print(final_content)
 
 
 def arg_parser():
@@ -210,9 +228,12 @@ def arg_parser():
     )
     return parser.parse_args()
 
+
 def main():
     options = arg_parser()
-    run(**vars(options))
-    
+    tably = Tably(options)
+    tably.run()
+
+
 if __name__ == '__main__':
     main()
