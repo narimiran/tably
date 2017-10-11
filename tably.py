@@ -44,6 +44,7 @@ class Tably:
             preamble(bool): create a preamble
             sep (string): column separator
             skip (int): number of rows in .csv to skip
+            units (list): units for each column
         """
         self.files = args.files
         self.no_header = args.no_header
@@ -55,6 +56,7 @@ class Tably:
         self.skip = args.skip
         self.preamble = args.preamble
         self.sep = get_sep(args.sep)
+        self.units = args.units
 
     def run(self):
         """The main method.
@@ -106,6 +108,10 @@ class Tably:
 
         if not self.no_header:
             rows.insert(1, r'{0}{0}\midrule'.format(indent))
+            if self.units:
+                rows[0] = rows[0] + r'\relax' # fixes problem with \[
+                units = get_units(self.units)
+                rows.insert(1, r'{0}{0}{1} \\'.format(indent, units))
 
         header = HEADER.format(
             label=add_label(self.label, indent),
@@ -150,6 +156,16 @@ def format_alignment(align, length):
         return '{:c<{l}.{l}}'.format(align, l=length)
 
 
+def get_units(units):
+    formatted_units = []
+    for unit in escaped(units):
+        if unit in '-/0':
+            formatted_units.append('')
+        else:
+            formatted_units.append('[{}]'.format(unit))
+    return ' & '.join(formatted_units)
+
+
 def add_label(label, indent):
     """Creates a table label"""
     return LABEL.format(label=label, indent=indent) if label else ''
@@ -160,16 +176,18 @@ def add_caption(caption, indent):
     return CAPTION.format(caption=caption, indent=indent) if caption else ''
 
 
+def escaped(line):
+    """Escapes special LaTeX characters by prefixing them with backslash"""
+    for char in '#$%&_}{':
+        line = [column.replace(char, '\\'+char) for column in line]
+    return line
+
+
 def create_row(line, indent):
     """Creates a row based on `line` content"""
-    def escape(line):
-        for char in '#$%&_}{':
-            line = [column.replace(char, '\\'+char) for column in line]
-        return line
-
     return r'{indent}{indent}{content} \\'.format(
               indent=indent,
-              content=' & '.join(escape(line)))
+              content=' & '.join(escaped(line)))
 
 
 def save_content(content, outfile):
@@ -248,6 +266,13 @@ def arg_parser():
              r'pass `t` or `tab`. If a file is semicolon-separated, '
              r'pass `s`, `semi` or `\;`.'
              r'Default: `,` (comma-separated)'
+    )
+    parser.add_argument(
+        '-u', '--units',
+        nargs='+',
+        help='Provide units for each column. If column has no unit, denote it '
+             'by passing either `-`, `/` or `0`. If `--no-header` is used, '
+             'this argument is ignored.'
     )
     return parser.parse_args()
 

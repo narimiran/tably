@@ -6,6 +6,9 @@ Python script for converting .csv data to LaTeX tables.
 # Features
 
 * easy to use - just provide a .csv file
+* escapes commonly used special LaTeX characters, such as `$`, `&`, `%`, etc.
+* user-defined separators - comma, tab, semicolon, etc.
+* units for each column can be specified
 * possible to define table caption and label
 * columns' alignments can be customized
 * can be used on multiple .csv files at the same time
@@ -21,10 +24,15 @@ It uses `booktabs` package for creating the tables (nicer looking tables than th
 
 # Installation
 
-For a test run all you need to do is download the file [`tably.py`](tably.py) and put it in the directory where you would like to use it.
+For a test run all you need to do is download the file [`tably.py`](tably.py) and put it in the directory where you would like to use it and run it by typing:
+```bash
+$ python tably.py filename.csv [arguments]
+```
 
-If you wish to use it repeatedly, a good idea would be to make it executable and add it to your $PATH, which simplifies usage.
-(Then you can call it from any directory just by `tably filename.csv [arguments]`, as shown in the following examples, otherwise you need to call it by `python tably.py filename.csv [arguments]`)
+If you wish to use it repeatedly, a good idea would be to make it executable and add it to your $PATH, which simplifies usage and makes it possible to use it in any directory:
+```bash
+$ tably filename.csv [arguments]
+```
 
 
 # Usage
@@ -68,7 +76,7 @@ $ tably -h
 
 ```
 usage: tably [-h] [-a ALIGN] [-c CAPTION] [-i] [-k SKIP] [-l LABEL] [-n]
-             [-o OUTFILE] [-p] [-s SEP]
+             [-o OUTFILE] [-p] [-s SEP] [-u UNITS [UNITS ...]]
              files [files ...]
 
 Creates LaTeX tables from .csv files
@@ -105,6 +113,10 @@ optional arguments:
                         separated, pass `t` or `tab`. If a file is semicolon-
                         separated, pass `s`, `semi` or `\;`.Default: `,`
                         (comma-separated)
+  -u UNITS [UNITS ...], --units UNITS [UNITS ...]
+                        Provide units for each column. If column has no unit,
+                        denote it by passing either `-`, `/` or `0`. If `--no-
+                        header` is used, this argument is ignored.
 ```
 
 ---
@@ -112,10 +124,10 @@ optional arguments:
 More complex examples:
 
 ```bash
-$ tably examples/example1.csv -o examples/table1.tex -p -i -a lrrr -l tab:ex1 -c "Prices of breakfasts"
+$ tably examples/example1.csv -o examples/table1.tex -p -i -a lrcr -u / kg $ $ -l tab:ex1 -c "Prices of breakfasts"
 ```
 
-Saves the output (`-o`) to [examples/table1.tex](examples/table1.tex) file, containing a preamble (`-p`), where contents are indented (`-i`), alignment of the columns (`-a`) in the table is left-right-right-right (`lrrr`) , table label (`-l`) is `tab:ex1` and the caption (`-c`) is `Prices of breakfasts`.
+Saves the output (`-o`) to [examples/table1.tex](examples/table1.tex) file, containing a preamble (`-p`), where contents are indented (`-i`), alignment of the columns (`-a`) in the table is left-right-center-right (`lrcr`), units (`-u`) for each column are provided (`/` represents no unit, same as `0` and `-`), table label (`-l`) is `tab:ex1` and the caption (`-c`) is `Prices of breakfasts`.
 The final result is at [examples/table1.pdf](examples/table1.pdf).
 
 ---
