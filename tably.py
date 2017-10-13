@@ -96,11 +96,9 @@ class Tably:
 
         try:
             with open(file) as infile:
-                for i, line in enumerate(infile.readlines()):
+                for i, columns in enumerate(csv.reader(infile, delimiter=self.sep)):
                     if i < self.skip:
                         continue
-                    line = line.strip()
-                    columns = line.split(self.sep)
                     rows.append(create_row(columns, indent))
         except FileNotFoundError:
             print("File {} doesn't exist!!\n".format(file))
