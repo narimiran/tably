@@ -2,7 +2,9 @@
 
 import argparse
 import csv
+import logging
 
+logger = logging.getLogger(__name__)
 
 PREAMBLE = r"""\documentclass[11pt, a4paper]{article}
 \usepackage{booktabs}
@@ -143,14 +145,25 @@ def format_alignment(align, length):
     If alignment length is too short, it is padded with `c` for the missing
     columns.
     """
-    if any(ch not in 'lcr' for ch in align):
+    unrecognized = set(align).difference('lcr')
+    if unrecognized:
+        logger.warning(
+            "Unrecognized column type%s %s. Replacing all with 'c'.",
+            *(('s', unrecognized) if len(unrecognized) > 1 else
+              ('', "'%s'" % unrecognized.pop()))
+        )
         align = 'c'
 
-    if len(align) == 1:
+    n = len(align)
+    if n == 1:
         return length * align
-    elif len(align) == length:
+    elif n == length:
         return align
     else:
+        logger.info(
+            'Too many columns given. Truncating.' if n > length else
+            "Too few columns given. Padding with 'c'."
+        )
         return '{:c<{l}.{l}}'.format(align, l=length)
 
 
