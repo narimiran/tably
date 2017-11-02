@@ -65,17 +65,22 @@ class Tably:
         If `outfile` is provided, calls `save_content` function,
         otherwise prints to the console.
         """
-        if self.preamble:
-            all_tables = [PREAMBLE]
-        else:
-            all_tables = ['\n% \\usepackage{booktabs} % move this to preamble and uncomment']
+        all_tables = []
         if self.label and len(self.files) > 1:
             all_tables.append("% don't forget to manually re-label the tables")
         for file in self.files:
             table = self.create_table(file)
-            all_tables.append(table)
+            if table:
+                all_tables.append(table)
+        if not all_tables:
+            return
+
         if self.preamble:
+            all_tables.insert(0, PREAMBLE)
             all_tables.append(r'\end{document}')
+        else:
+            all_tables.insert(0, '\n% \\usepackage{booktabs} % move this to '
+                                 'preamble and uncomment')
 
         final_content = '\n\n'.join(all_tables)
         if self.outfile:
@@ -102,6 +107,10 @@ class Tably:
                     rows.append(create_row(columns, indent))
         except FileNotFoundError:
             print("File {} doesn't exist!!\n".format(file))
+            return ''
+        if not rows:
+            print("No table created from the {} file. Check if the file is empty "
+                  "or you used too high skip value.\n".format(file))
             return ''
 
         if not self.no_header:
