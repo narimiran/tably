@@ -9,7 +9,7 @@ PREAMBLE = r"""\documentclass[11pt, a4paper]{article}
 \begin{document}"""
 
 HEADER = r"""\begin{{table}}[htb]
-{indent}\centering{label}{caption}
+{indent}\centering{caption}{label}
 {indent}\begin{{tabular}}{{@{{}}{align}@{{}}}}
 {indent}{indent}\toprule"""
 
@@ -77,7 +77,7 @@ class Tably:
 
         if self.preamble:
             all_tables.insert(0, PREAMBLE)
-            all_tables.append(r'\end{document}')
+            all_tables.append('\\end{document}\n')
         else:
             all_tables.insert(0, '\n% \\usepackage{booktabs} % move this to '
                                  'preamble and uncomment')
@@ -193,8 +193,8 @@ def escaped(line):
 def create_row(line, indent):
     """Creates a row based on `line` content"""
     return r'{indent}{indent}{content} \\'.format(
-              indent=indent,
-              content=' & '.join(escaped(line)))
+             indent=indent,
+             content=' & '.join(escaped(line)))
 
 
 def save_content(content, outfile):
