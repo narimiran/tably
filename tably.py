@@ -2,7 +2,9 @@
 
 import argparse
 import csv
+import logging
 
+logger = logging.getLogger(__name__)
 
 PREAMBLE = r"""\documentclass[11pt, a4paper]{article}
 \usepackage{booktabs}
@@ -99,11 +101,13 @@ class Tably:
         rows = []
         indent = 4*' ' if not self.no_indent else ''
 
+        num_columns = 0
         try:
             with open(file) as infile:
                 for i, columns in enumerate(csv.reader(infile, delimiter=self.sep)):
                     if i < self.skip:
                         continue
+                    num_columns = max(num_columns, len(columns))
                     rows.append(create_row(columns, indent))
         except FileNotFoundError:
             print("File {} doesn't exist!!\n".format(file))
@@ -123,7 +127,7 @@ class Tably:
         header = HEADER.format(
             label=add_label(self.label, indent),
             caption=add_caption(self.caption, indent),
-            align=format_alignment(self.align, len(columns)),
+            align=format_alignment(self.align, num_columns),
             indent=indent,
         )
         content = '\n'.join(rows)
@@ -152,14 +156,28 @@ def format_alignment(align, length):
     If alignment length is too short, it is padded with `c` for the missing
     columns.
     """
-    if any(ch not in 'lcr' for ch in align):
+    unrecognized = set(align).difference('lcr')
+    if unrecognized:
+        logger.warning(
+            "Unrecognized column type%s %s. Replacing all with 'c'.",
+            *(('s', unrecognized) if len(unrecognized) > 1 else
+              ('', "'%s'" % unrecognized.pop()))
+        )
         align = 'c'
 
-    if len(align) == 1:
+    if length == 0:
+        logger.info('Increasing number of columns from 0 to 1.')
+        length = 1
+    n = len(align)
+    if n == 1:
         return length * align
-    elif len(align) == length:
+    elif n == length:
         return align
     else:
+        logger.info(
+            'Too many columns given. Truncating.' if n > length else
+            "Too few columns given. Padding with 'c'."
+        )
         return '{:c<{l}.{l}}'.format(align, l=length)
 
 
