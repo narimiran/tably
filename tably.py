@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# To directly call tably from shell, set a symbolic link by running
+# ln -sf $PWD/tably.py /usr/local/bin/tably
+
 import argparse
 import csv
 
@@ -19,6 +22,7 @@ FOOTER = r"""{indent}{indent}\bottomrule
 
 LABEL = '\n{indent}\\label{{{label}}}'
 CAPTION = '\n{indent}\\caption{{{caption}}}'
+ESCAPE = True
 
 
 class Tably:
@@ -33,30 +37,40 @@ class Tably:
         """
         Attributes:
             files (string): name(s) of the .csv file(s)
-            align (string): wanted alignment of the columns
-            caption (string): the name of the table, printed above it
-            indent (bool): should a LaTeX code be indented with 4 spaces per
-                code block. Doesn't affect the final looks of the table.
-            label (string): a label by which the table can be referenced
             no_header (bool): if the .csv contains only content, without a
                 header (names for the columns)
+            caption (string): the name of the table, printed above it
+            label (string): a label by which the table can be referenced
+            align (string): wanted alignment of the columns
+            no_indent (bool): should a LaTeX code be indented with 4 spaces per
+                code block. Doesn't affect the final looks of the table.
             outfile (string): name of the file where to save the results.
+            separate_outfiles (list): names of the files where each table is saved
+            skip (int): number of rows in .csv to skip
             preamble(bool): create a preamble
             sep (string): column separator
-            skip (int): number of rows in .csv to skip
             units (list): units for each column
+            no_escape (bool): do not escape special LaTeX characters
+            fragment (bool): only output content in tabular environment
+            fragment_skip_header (bool): shortcut of passing -k 1 -n -f
+            replace (bool): replace exisitng output file if -o is passed
         """
         self.files = args.files
         self.no_header = args.no_header
-        self.label = args.label
         self.caption = args.caption
+        self.label = args.label
         self.align = args.align
         self.no_indent = args.no_indent
         self.outfile = args.outfile
+        self.separate_outfiles = args.separate_outfiles
         self.skip = args.skip
         self.preamble = args.preamble
         self.sep = get_sep(args.sep)
         self.units = args.units
+        self.no_escape = args.no_escape
+        self.fragment = args.fragment
+        self.fragment_skip_header = args.fragment_skip_header
+        self.replace = args.replace
 
     def run(self):
         """The main method.
@@ -66,8 +80,24 @@ class Tably:
         otherwise prints to the console.
         """
         all_tables = []
+
+        if self.no_escape:
+            global ESCAPE
+            ESCAPE = False
+
+        if self.fragment_skip_header:
+            self.skip = 1
+            self.no_header = True
+            self.fragment = True
+
+        if self.fragment:
+            self.no_indent = True
+            self.label = None
+            self.preamble = False
+        
         if self.label and len(self.files) > 1:
             all_tables.append("% don't forget to manually re-label the tables")
+        
         for file in self.files:
             table = self.create_table(file)
             if table:
@@ -78,16 +108,21 @@ class Tably:
         if self.preamble:
             all_tables.insert(0, PREAMBLE)
             all_tables.append('\\end{document}\n')
-        else:
-            all_tables.insert(0, '\n% \\usepackage{booktabs} % move this to '
-                                 'preamble and uncomment')
 
         final_content = '\n\n'.join(all_tables)
         if self.outfile:
             try:
-                save_content(final_content, self.outfile)
+                save_content(final_content, self.outfile, self.replace)
             except FileNotFoundError:
                 print('{} is not a valid/known path. Could not save there.'.format(self.outfile))
+        elif self.separate_outfiles is not None: # if -oo is passed
+            outs = self.separate_outfiles
+            if len(outs) == 0:
+                outs = [ file[:-4]+'.tex' if file[-4:]=='.csv' else file+'.tex' for file in self.files]
+            elif len(outs) != len(self.files):
+                print('WARNING: Number of .cvs files and number of output files do not match')
+            for file, out in zip(self.files, outs):
+                self.save_each_table(file, out)
         else:
             print(final_content)
 
@@ -120,15 +155,29 @@ class Tably:
                 units = get_units(self.units)
                 rows.insert(1, r'{0}{0}{1} \\'.format(indent, units))
 
-        header = HEADER.format(
+        content = '\n'.join(rows)
+        if not self.fragment:
+            header = HEADER.format(
             label=add_label(self.label, indent),
             caption=add_caption(self.caption, indent),
             align=format_alignment(self.align, len(columns)),
             indent=indent,
-        )
-        content = '\n'.join(rows)
-        footer = FOOTER.format(indent=indent)
-        return '\n'.join((header, content, footer))
+            )
+            footer = FOOTER.format(indent=indent)
+            return '\n'.join((header, content, footer))
+        else:
+            return content
+    def save_each_table(self, file, out):
+        table = [self.create_table(file)]
+        if table:
+            if self.preamble:
+                table.insert(0, PREAMBLE)
+                table.append('\\end{document}\n')
+            final_content = '\n\n'.join(table)
+            try:
+                save_content(final_content, out, self.replace)
+            except FileNotFoundError:
+                print('{} is not a valid/known path. Could not save there.'.format(out))
 
 
 def get_sep(sep):
@@ -185,8 +234,9 @@ def add_caption(caption, indent):
 
 def escaped(line):
     """Escapes special LaTeX characters by prefixing them with backslash"""
-    for char in '#$%&_}{':
-        line = [column.replace(char, '\\'+char) for column in line]
+    if ESCAPE:
+        for char in '#$%&_}{':
+            line = [column.replace(char, '\\'+char) for column in line]
     return line
 
 
@@ -197,15 +247,21 @@ def create_row(line, indent):
              content=' & '.join(escaped(line)))
 
 
-def save_content(content, outfile):
+def save_content(content, outfile, replace):
     """Saves the content to a file.
 
-    If the existing file is provided, the content is appended to the end
-    of the file.
+    If an existing file is provided, the content is appended to the end
+    of the file by default. If -r is passed, the file is overwritten.
     """
-    with open(outfile, 'a') as out:
-        out.writelines(content)
-    print('The content is added to', outfile)
+    if replace:
+        with open(outfile, 'w') as out:
+            out.writelines(content)
+        print('The content is written to', outfile)
+    else:
+        with open(outfile, 'a') as out:
+            out.writelines(content)
+        print('The content is appended to', outfile)
+    
 
 
 def arg_parser():
@@ -260,6 +316,15 @@ def arg_parser():
              'Default: None, prints to console.'
     )
     parser.add_argument(
+        '-oo', '--separate-outfiles',
+        nargs='*',
+        help='When multiple .csv files need to be processed, '
+             'pass a list of filenames after -oo at the end of the command '
+             'to save each individual table to one of the files based on order. '
+             'If no filenames are passed after -oo, '
+             'filenames of .csv files will be used. '
+    )
+    parser.add_argument(
         '-p', '--preamble',
         action='store_true',
         help='If selected, makes a whole .tex document (including the preamble) '
@@ -280,6 +345,28 @@ def arg_parser():
         help='Provide units for each column. If column has no unit, denote it '
              'by passing either `-`, `/` or `0`. If `--no-header` is used, '
              'this argument is ignored.'
+    )
+    parser.add_argument(
+        '-e', '--no-escape',
+        action='store_true',
+        help='If selected, do not escape special LaTeX characters '
+    )
+    parser.add_argument(
+        '-f', '--fragment',
+        action='store_true',
+        help='If selected, only output content inside tabular environment '
+             '(no preamble, table environment, etc.) '
+    )
+    parser.add_argument(
+        '-ff', '--fragment-skip-header',
+        action='store_true',
+        help='Equivalent to passing -k 1 -n -f '
+             '(suppress header when they are on the first row of .csv and pass -f) '
+    )
+    parser.add_argument(
+        '-r', '--replace',
+        action='store_true',
+        help='If selected and -o is passed, overwrite any existing output file '
     )
     return parser.parse_args()
 

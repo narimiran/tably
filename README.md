@@ -6,13 +6,15 @@ Python script for converting .csv data to LaTeX tables.
 # Features
 
 * easy to use - just provide a .csv file
-* escapes commonly used special LaTeX characters, such as `$`, `&`, `%`, etc.
+* optionally escapes commonly used special LaTeX characters, such as `$`, `&`, `%`, etc.
 * user-defined separators - comma, tab, semicolon, etc.
 * units for each column can be specified
 * possible to define table caption and label
 * columns' alignments can be customized
 * can be used on multiple .csv files at the same time
 * table can be added to the existing .tex file
+* can generate only the fragment inside a tabular environment for inserting into another tex file
+* when working with multiple .csv files, can optionally save each table in a different file
 
 
 # Requirements
@@ -76,7 +78,8 @@ $ tably -h
 
 ```
 usage: tably [-h] [-a ALIGN] [-c CAPTION] [-i] [-k SKIP] [-l LABEL] [-n]
-             [-o OUTFILE] [-p] [-s SEP] [-u UNITS [UNITS ...]]
+             [-o OUTFILE] [-oo [SEPARATE_OUTFILES [SEPARATE_OUTFILES ...]]]
+             [-p] [-s SEP] [-u UNITS [UNITS ...]] [-e] [-f] [-ff] [-r]
              files [files ...]
 
 Creates LaTeX tables from .csv files
@@ -106,6 +109,12 @@ optional arguments:
                         Choose an output file to save the results. The results
                         are appended to the file (added after the last line).
                         Default: None, prints to console.
+  -oo [SEPARATE_OUTFILES [SEPARATE_OUTFILES ...]], --separate-outfiles [SEPARATE_OUTFILES [SEPARATE_OUTFILES ...]]
+                        When multiple .csv files need to be processed, pass a
+                        list of filenames after -oo at the end of the command
+                        to save each individual table to one of the files
+                        based on order. If no filenames are passed after -oo,
+                        filenames of .csv files will be used.
   -p, --preamble        If selected, makes a whole .tex document (including
                         the preamble) ready to be built as .pdf. Useful when
                         trying to make a quick report. Default: False
@@ -117,6 +126,14 @@ optional arguments:
                         Provide units for each column. If column has no unit,
                         denote it by passing either `-`, `/` or `0`. If `--no-
                         header` is used, this argument is ignored.
+  -e, --no-escape       If selected, do not escape special LaTeX characters
+  -f, --fragment        If selected, only output content inside tabular
+                        environment (no preamble, table environment, etc.)
+  -ff, --fragment-skip-header
+                        Equivalent to passing -k 1 -n -f (suppress header when
+                        they are on the first row of .csv and pass -f)
+  -r, --replace         If selected and -o is passed, overwrite any existing
+                        output file
 ```
 
 ---
@@ -138,6 +155,33 @@ $ tably examples/example2.csv -o examples/table2.tex -p -a r -n -k 3
 
 Here the alignment for a whole table is right (`-a r`), there is no header (`-n`) and we skip first three rows of .csv file (`-k 3`).
 The final result is at [examples/table2.pdf](examples/table2.pdf).
+
+---
+
+```bash
+$ tably examples/example3.csv -ef -ro examples/table3.tex
+```
+
+When .csv files contain special LaTeX characters
+that are supposed to be reserved in the output,
+the --no-escape (-e) option suppresses the default escaping.
+To include the output in a tex file that already contains
+a tabular environment by calling \input{table3.tex},
+only the fragment (-f) inside the environment is generated.
+If the output file already exists,
+it will be replaced by the output (-r).
+
+---
+
+```bash
+$ tably examples/*.csv -oo 1.tex 2.tex 3.tex -p
+```
+
+Output for each table can be saved into a different file
+with the --separate-outfiles (-oo) option and an optional list of output file names specified.
+If no file name comes after -oo,
+the same file names for the .csv files will be used
+(replacing .csv extension with .tex, or appending .tex if no .csv extension is included in the filename).
 
 
 # FAQ
