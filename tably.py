@@ -5,6 +5,7 @@
 
 import argparse
 import csv
+import os
 
 
 PREAMBLE = r"""\documentclass[11pt, a4paper]{article}
@@ -22,8 +23,6 @@ FOOTER = r"""{indent}{indent}\bottomrule
 
 LABEL = '\n{indent}\\label{{{label}}}'
 CAPTION = '\n{indent}\\caption{{{caption}}}'
-ESCAPE = True
-
 
 class Tably:
     """Object which holds parsed arguments.
@@ -31,6 +30,7 @@ class Tably:
     Methods:
         run: creates a LaTeX code/file
         create_table: for each specified file, creates a LaTeX table
+        save_single_table: creates and saves a single LaTex table
     """
 
     def __init__(self, args):
@@ -79,11 +79,6 @@ class Tably:
         If `outfile` is provided, calls `save_content` function,
         otherwise prints to the console.
         """
-        all_tables = []
-
-        if self.no_escape:
-            global ESCAPE
-            ESCAPE = False
 
         if self.fragment_skip_header:
             self.skip = 1
@@ -95,36 +90,30 @@ class Tably:
             self.label = None
             self.preamble = False
         
-        if self.label and len(self.files) > 1:
-            all_tables.append("% don't forget to manually re-label the tables")
+        # if all tables need to be put into one file
+        if self.outfile or self.separate_outfiles is None:
+            final_content = self.combine_tables()
+            if not final_content:
+                return
+            if self.outfile:
+                try:
+                    save_content(final_content, self.outfile, self.replace)
+                except FileNotFoundError:
+                    print('{} is not a valid/known path. Could not save there.'.format(self.outfile))
+            else:
+                print(final_content)
         
-        for file in self.files:
-            table = self.create_table(file)
-            if table:
-                all_tables.append(table)
-        if not all_tables:
-            return
-
-        if self.preamble:
-            all_tables.insert(0, PREAMBLE)
-            all_tables.append('\\end{document}\n')
-
-        final_content = '\n\n'.join(all_tables)
-        if self.outfile:
-            try:
-                save_content(final_content, self.outfile, self.replace)
-            except FileNotFoundError:
-                print('{} is not a valid/known path. Could not save there.'.format(self.outfile))
-        elif self.separate_outfiles is not None: # if -oo is passed
+        # if -oo is passed (could be [])
+        if self.separate_outfiles is not None: 
             outs = self.separate_outfiles
             if len(outs) == 0:
-                outs = [ file[:-4]+'.tex' if file[-4:]=='.csv' else file+'.tex' for file in self.files]
+                outs = [ os.path.splitext(file)[0]+'.tex' for file in self.files ]
+            elif os.path.isdir(outs[0]):
+                outs = [ os.path.join(outs[0], os.path.splitext(os.path.basename(file))[0])+'.tex' for file in self.files ]
             elif len(outs) != len(self.files):
-                print('WARNING: Number of .cvs files and number of output files do not match')
+                print('WARNING: Number of .csv files and number of output files do not match!')
             for file, out in zip(self.files, outs):
-                self.save_each_table(file, out)
-        else:
-            print(final_content)
+                self.save_single_table(file, out)
 
     def create_table(self, file):
         """Creates a table from a given .csv file.
@@ -139,7 +128,7 @@ class Tably:
                 for i, columns in enumerate(csv.reader(infile, delimiter=self.sep)):
                     if i < self.skip:
                         continue
-                    rows.append(create_row(columns, indent))
+                    rows.append(create_row(columns, indent, self.no_escape))
         except FileNotFoundError:
             print("File {} doesn't exist!!\n".format(file))
             return ''
@@ -152,7 +141,7 @@ class Tably:
             rows.insert(1, r'{0}{0}\midrule'.format(indent))
             if self.units:
                 rows[0] = rows[0] + r'\relax' # fixes problem with \[
-                units = get_units(self.units)
+                units = get_units(self.units, self.no_escape)
                 rows.insert(1, r'{0}{0}{1} \\'.format(indent, units))
 
         content = '\n'.join(rows)
@@ -167,7 +156,24 @@ class Tably:
             return '\n'.join((header, content, footer))
         else:
             return content
-    def save_each_table(self, file, out):
+
+    def combine_tables(self):
+        all_tables = []
+        if self.label and len(self.files) > 1:
+            all_tables.append("% don't forget to manually re-label the tables")
+        
+        for file in self.files:
+            table = self.create_table(file)
+            if table:
+                all_tables.append(table)
+        if not all_tables:
+            return None
+        if self.preamble:
+            all_tables.insert(0, PREAMBLE)
+            all_tables.append('\\end{document}\n')
+        return '\n\n'.join(all_tables)
+
+    def save_single_table(self, file, out):
         table = [self.create_table(file)]
         if table:
             if self.preamble:
@@ -212,9 +218,11 @@ def format_alignment(align, length):
         return '{:c<{l}.{l}}'.format(align, l=length)
 
 
-def get_units(units):
+def get_units(units, no_escape):
     formatted_units = []
-    for unit in escaped(units):
+    if not no_escape:
+        units = escaped(units)
+    for unit in units:
         if unit in '-/0':
             formatted_units.append('')
         else:
@@ -234,15 +242,19 @@ def add_caption(caption, indent):
 
 def escaped(line):
     """Escapes special LaTeX characters by prefixing them with backslash"""
-    if ESCAPE:
-        for char in '#$%&_}{':
-            line = [column.replace(char, '\\'+char) for column in line]
+    for char in '#$%&_}{':
+        line = [column.replace(char, '\\'+char) for column in line]
     return line
 
 
-def create_row(line, indent):
+def create_row(line, indent, no_escape):
     """Creates a row based on `line` content"""
-    return r'{indent}{indent}{content} \\'.format(
+    if no_escape:
+        return r'{indent}{indent}{content} \\'.format(
+             indent=indent,
+             content=' & '.join(line))
+    else:
+        return r'{indent}{indent}{content} \\'.format(
              indent=indent,
              content=' & '.join(escaped(line)))
 
@@ -317,12 +329,15 @@ def arg_parser():
     )
     parser.add_argument(
         '-oo', '--separate-outfiles',
+        metavar='PATH',
         nargs='*',
         help='When multiple .csv files need to be processed, '
-             'pass a list of filenames after -oo at the end of the command '
-             'to save each individual table to one of the files based on order. '
-             'If no filenames are passed after -oo, '
-             'filenames of .csv files will be used. '
+             'pass -oo to save each individual table in a separate .tex file. '
+             'To specifiy each individual output file, '
+             'pass a list of filenames after -oo. '
+             'Alternatively, pass a directory that will store all the output files. '
+             'If no filename/directory is passed after -oo, '
+             'filenames of .csv files will be used (with .tex extension).'
     )
     parser.add_argument(
         '-p', '--preamble',
@@ -349,24 +364,24 @@ def arg_parser():
     parser.add_argument(
         '-e', '--no-escape',
         action='store_true',
-        help='If selected, do not escape special LaTeX characters '
+        help='If selected, do not escape special LaTeX characters.'
     )
     parser.add_argument(
         '-f', '--fragment',
         action='store_true',
         help='If selected, only output content inside tabular environment '
-             '(no preamble, table environment, etc.) '
+             '(no preamble, table environment, etc.).'
     )
     parser.add_argument(
         '-ff', '--fragment-skip-header',
         action='store_true',
         help='Equivalent to passing -k 1 -n -f '
-             '(suppress header when they are on the first row of .csv and pass -f) '
+             '(suppress header when they are on the first row of .csv and pass -f).'
     )
     parser.add_argument(
         '-r', '--replace',
         action='store_true',
-        help='If selected and -o is passed, overwrite any existing output file '
+        help='If selected and -o or -oo is passed, overwrite any existing output file.'
     )
     return parser.parse_args()
 

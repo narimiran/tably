@@ -78,8 +78,8 @@ $ tably -h
 
 ```
 usage: tably [-h] [-a ALIGN] [-c CAPTION] [-i] [-k SKIP] [-l LABEL] [-n]
-             [-o OUTFILE] [-oo [SEPARATE_OUTFILES [SEPARATE_OUTFILES ...]]]
-             [-p] [-s SEP] [-u UNITS [UNITS ...]] [-e] [-f] [-ff] [-r]
+             [-o OUTFILE] [-oo [PATH [PATH ...]]] [-p] [-s SEP]
+             [-u UNITS [UNITS ...]] [-e] [-f] [-ff] [-r]
              files [files ...]
 
 Creates LaTeX tables from .csv files
@@ -109,12 +109,14 @@ optional arguments:
                         Choose an output file to save the results. The results
                         are appended to the file (added after the last line).
                         Default: None, prints to console.
-  -oo [SEPARATE_OUTFILES [SEPARATE_OUTFILES ...]], --separate-outfiles [SEPARATE_OUTFILES [SEPARATE_OUTFILES ...]]
-                        When multiple .csv files need to be processed, pass a
-                        list of filenames after -oo at the end of the command
-                        to save each individual table to one of the files
-                        based on order. If no filenames are passed after -oo,
-                        filenames of .csv files will be used.
+  -oo [PATH [PATH ...]], --separate-outfiles [PATH [PATH ...]]
+                        When multiple .csv files need to be processed, pass
+                        -oo to save each individual table in a separate .tex
+                        file. To specifiy each individual output file, pass a
+                        list of filenames after -oo. Alternatively, pass a
+                        directory that will store all the output files. If no
+                        filename/directory is passed after -oo, filenames of
+                        .csv files will be used (with .tex extension).
   -p, --preamble        If selected, makes a whole .tex document (including
                         the preamble) ready to be built as .pdf. Useful when
                         trying to make a quick report. Default: False
@@ -126,14 +128,14 @@ optional arguments:
                         Provide units for each column. If column has no unit,
                         denote it by passing either `-`, `/` or `0`. If `--no-
                         header` is used, this argument is ignored.
-  -e, --no-escape       If selected, do not escape special LaTeX characters
+  -e, --no-escape       If selected, do not escape special LaTeX characters.
   -f, --fragment        If selected, only output content inside tabular
-                        environment (no preamble, table environment, etc.)
+                        environment (no preamble, table environment, etc.).
   -ff, --fragment-skip-header
                         Equivalent to passing -k 1 -n -f (suppress header when
-                        they are on the first row of .csv and pass -f)
-  -r, --replace         If selected and -o is passed, overwrite any existing
-                        output file
+                        they are on the first row of .csv and pass -f).
+  -r, --replace         If selected and -o or -oo is passed, overwrite any
+                        existing output file.
 ```
 
 ---
@@ -177,8 +179,9 @@ it will be replaced by the output (-r).
 $ tably examples/*.csv -oo 1.tex 2.tex 3.tex -p
 ```
 
-Output for each table can be saved into a different file
+Output for each table is saved into a different file
 with the --separate-outfiles (-oo) option and an optional list of output file names specified.
+Alternatively, an output directory can be passed after -oo.
 If no file name comes after -oo,
 the same file names for the .csv files will be used
 (replacing .csv extension with .tex, or appending .tex if no .csv extension is included in the filename).
