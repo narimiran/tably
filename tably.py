@@ -50,10 +50,10 @@ class Tably:
             preamble(bool): create a preamble
             sep (string): column separator
             units (list): units for each column
-            no_escape (bool): do not escape special LaTeX characters
             fragment (bool): only output content in tabular environment
             fragment_skip_header (bool): shortcut of passing -k 1 -n -f
             replace (bool): replace exisitng output file if -o is passed
+            tex_str (function): escape LaTeX special characters or do nothing
         """
         self.files = args.files
         self.no_header = args.no_header
@@ -67,10 +67,13 @@ class Tably:
         self.preamble = args.preamble
         self.sep = get_sep(args.sep)
         self.units = args.units
-        self.no_escape = args.no_escape
         self.fragment = args.fragment
         self.fragment_skip_header = args.fragment_skip_header
         self.replace = args.replace
+        if args.no_escape:
+            self.tex_str = do_not_escape
+        else:
+            self.tex_str = escape
 
     def run(self):
         """The main method.
@@ -128,7 +131,7 @@ class Tably:
                 for i, columns in enumerate(csv.reader(infile, delimiter=self.sep)):
                     if i < self.skip:
                         continue
-                    rows.append(create_row(columns, indent, self.no_escape))
+                    rows.append(self.create_row(columns, indent))
         except FileNotFoundError:
             print("File {} doesn't exist!!\n".format(file))
             return ''
@@ -141,7 +144,7 @@ class Tably:
             rows.insert(1, r'{0}{0}\midrule'.format(indent))
             if self.units:
                 rows[0] = rows[0] + r'\relax' # fixes problem with \[
-                units = get_units(self.units, self.no_escape)
+                units = self.get_units()
                 rows.insert(1, r'{0}{0}{1} \\'.format(indent, units))
 
         content = '\n'.join(rows)
@@ -156,6 +159,12 @@ class Tably:
             return '\n'.join((header, content, footer))
         else:
             return content
+    
+    def create_row(self, line, indent):
+        """Creates a row based on `line` content"""
+        return r'{indent}{indent}{content} \\'.format(
+             indent=indent,
+             content=' & '.join(self.tex_str(line)))
 
     def combine_tables(self):
         all_tables = []
@@ -185,6 +194,15 @@ class Tably:
             except FileNotFoundError:
                 print('{} is not a valid/known path. Could not save there.'.format(out))
 
+    def get_units(self):
+        formatted_units = []
+        for unit in self.tex_str(self.units):
+            if unit in '-/0':
+                formatted_units.append('')
+            else:
+                formatted_units.append('[{}]'.format(unit))
+        return ' & '.join(formatted_units)
+
 
 def get_sep(sep):
     if sep.lower() in ['t', 'tab', '\\t']:
@@ -195,6 +213,17 @@ def get_sep(sep):
         return ','
     else:
         return sep
+
+
+def do_not_escape(line):
+    return line
+
+
+def escape(line):
+    """Escapes special LaTeX characters by prefixing them with backslash"""
+    for char in '#$%&_}{':
+        line = [column.replace(char, '\\'+char) for column in line]
+    return line
 
 
 def format_alignment(align, length):
@@ -218,18 +247,6 @@ def format_alignment(align, length):
         return '{:c<{l}.{l}}'.format(align, l=length)
 
 
-def get_units(units, no_escape):
-    formatted_units = []
-    if not no_escape:
-        units = escaped(units)
-    for unit in units:
-        if unit in '-/0':
-            formatted_units.append('')
-        else:
-            formatted_units.append('[{}]'.format(unit))
-    return ' & '.join(formatted_units)
-
-
 def add_label(label, indent):
     """Creates a table label"""
     return LABEL.format(label=label, indent=indent) if label else ''
@@ -238,25 +255,6 @@ def add_label(label, indent):
 def add_caption(caption, indent):
     """Creates a table caption"""
     return CAPTION.format(caption=caption, indent=indent) if caption else ''
-
-
-def escaped(line):
-    """Escapes special LaTeX characters by prefixing them with backslash"""
-    for char in '#$%&_}{':
-        line = [column.replace(char, '\\'+char) for column in line]
-    return line
-
-
-def create_row(line, indent, no_escape):
-    """Creates a row based on `line` content"""
-    if no_escape:
-        return r'{indent}{indent}{content} \\'.format(
-             indent=indent,
-             content=' & '.join(line))
-    else:
-        return r'{indent}{indent}{content} \\'.format(
-             indent=indent,
-             content=' & '.join(escaped(line)))
 
 
 def save_content(content, outfile, replace):
