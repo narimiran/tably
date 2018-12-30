@@ -24,13 +24,17 @@ FOOTER = r"""{indent}{indent}\bottomrule
 LABEL = '\n{indent}\\label{{{label}}}'
 CAPTION = '\n{indent}\\caption{{{caption}}}'
 
+
 class Tably:
     """Object which holds parsed arguments.
 
     Methods:
-        run: creates a LaTeX code/file
+        run: selects the appropriate methods to generate LaTeX code/files
         create_table: for each specified file, creates a LaTeX table
-        save_single_table: creates and saves a single LaTex table
+        create_row: creates a row based on `line` content
+        combine_tables: combines all tables from input files together
+        save_single_table: creates and saves a single LaTeX table
+        get_units: writes the units as a row of the LaTeX table
     """
 
     def __init__(self, args):
@@ -70,17 +74,17 @@ class Tably:
         self.fragment = args.fragment
         self.fragment_skip_header = args.fragment_skip_header
         self.replace = args.replace
-        if args.no_escape:
-            self.tex_str = do_not_escape
-        else:
-            self.tex_str = escape
+        self.tex_str = escape if not args.no_escape else lambda x: x
 
     def run(self):
         """The main method.
 
-        For each file in `files`, calls `create_table` method.
-        If `outfile` is provided, calls `save_content` function,
-        otherwise prints to the console.
+        If all tables need to be put into a single file,
+        calls `combine_tables` method to generate LaTeX code
+        and then calls `save_content` function if `outfile` is provided;
+        otherwise, prints to the console.
+        If each table needs to be put into a separate file,
+        calls `save_single_table` method to create and save each table separately.
         """
 
         if self.fragment_skip_header:
@@ -121,7 +125,9 @@ class Tably:
     def create_table(self, file):
         """Creates a table from a given .csv file.
 
-        The method `run` calls this method.
+        This method gives the procedure of converting a .csv file to a LaTeX table.
+        Unless -f is specified, the output is a ready-to-use LaTeX table environment.
+        All other methods that need to obtain a LaTeX table from a .csv file call this method.
         """
         rows = []
         indent = 4*' ' if not self.no_indent else ''
@@ -167,6 +173,10 @@ class Tably:
              content=' & '.join(self.tex_str(line)))
 
     def combine_tables(self):
+        """Combine all tables together and add a preamble if required
+        
+        Unless -oo is specified, this is how input tables are arranged.
+        """
         all_tables = []
         if self.label and len(self.files) > 1:
             all_tables.append("% don't forget to manually re-label the tables")
@@ -183,6 +193,7 @@ class Tably:
         return '\n\n'.join(all_tables)
 
     def save_single_table(self, file, out):
+        """Creates and saves a single LaTeX table"""
         table = [self.create_table(file)]
         if table:
             if self.preamble:
@@ -195,6 +206,7 @@ class Tably:
                 print('{} is not a valid/known path. Could not save there.'.format(out))
 
     def get_units(self):
+        """Writes the units as a row of the LaTeX table"""
         formatted_units = []
         for unit in self.tex_str(self.units):
             if unit in '-/0':
@@ -213,10 +225,6 @@ def get_sep(sep):
         return ','
     else:
         return sep
-
-
-def do_not_escape(line):
-    return line
 
 
 def escape(line):
