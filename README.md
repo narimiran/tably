@@ -67,8 +67,7 @@ outputs to console:
 ```
 which is ready to be copied to your existing LaTeX document.
 
-
-If you want the output to be appended to your existing .tex file, use the option `-o filename.tex`.  
+If you want the output to be appended to your existing .tex file, use the option `-o filename.tex`.
 If you want to create a new file, you probably want to include a preamble too (so the new .tex document is ready to be build as .pdf), which can be done by passing the `-p` option (along with specifying outfile as above).
 
 All options can be seen by using `-h` or `--help`:
@@ -138,7 +137,7 @@ optional arguments:
                         existing output file.
 ```
 
----
+&nbsp;
 
 More complex examples:
 
@@ -164,14 +163,9 @@ The final result is at [examples/table2.pdf](examples/table2.pdf).
 $ tably examples/example3.csv -ef -ro examples/table3.tex
 ```
 
-When .csv files contain special LaTeX characters
-that are supposed to be reserved in the output,
-the --no-escape (-e) option suppresses the default escaping.
-To include the output in a tex file that already contains
-a tabular environment by calling \input{table3.tex},
-only the fragment (-f) inside the environment is generated.
-If the output file already exists,
-it will be replaced by the output (-r).
+When .csv files contain special LaTeX characters that are supposed to be reserved in the output, the `--no-escape` (`-e`) option suppresses the default escaping.
+To include the output in a tex file that already contains a tabular environment by calling `\input{table3.tex}`, only the fragment (`-f`) inside the environment is generated.
+If the output file already exists, it will be replaced by the output (`-r`).
 
 ---
 
@@ -179,13 +173,12 @@ it will be replaced by the output (-r).
 $ tably examples/*.csv -oo 1.tex 2.tex 3.tex -p
 ```
 
-Output for each table is saved into a different file
-with the --separate-outfiles (-oo) option and an optional list of output file names specified.
-Alternatively, an output directory can be passed after -oo.
-If no file name comes after -oo,
-the same file names for the .csv files will be used
-(replacing .csv extension with .tex, or appending .tex if no .csv extension is included in the filename).
+Output for each table is saved into a different file with the `--separate-outfiles` (`-oo`) option and an optional list of output file names specified.
+Alternatively, an output directory can be passed after `-oo`.
+If no file name comes after `-oo`, the same file names for the .csv files will be used (replacing .csv extension with .tex, or appending .tex if no .csv extension is included in the filename).
 
+
+&nbsp;
 
 # FAQ
 

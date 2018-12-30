@@ -56,7 +56,7 @@ class Tably:
             units (list): units for each column
             fragment (bool): only output content in tabular environment
             fragment_skip_header (bool): shortcut of passing -k 1 -n -f
-            replace (bool): replace exisitng output file if -o is passed
+            replace (bool): replace existing output file if -o is passed
             tex_str (function): escape LaTeX special characters or do nothing
         """
         self.files = args.files
@@ -96,7 +96,7 @@ class Tably:
             self.no_indent = True
             self.label = None
             self.preamble = False
-        
+
         # if all tables need to be put into one file
         if self.outfile or self.separate_outfiles is None:
             final_content = self.combine_tables()
@@ -109,9 +109,9 @@ class Tably:
                     print('{} is not a valid/known path. Could not save there.'.format(self.outfile))
             else:
                 print(final_content)
-        
+
         # if -oo is passed (could be [])
-        if self.separate_outfiles is not None: 
+        if self.separate_outfiles is not None:
             outs = self.separate_outfiles
             if len(outs) == 0:
                 outs = [ os.path.splitext(file)[0]+'.tex' for file in self.files ]
@@ -165,7 +165,7 @@ class Tably:
             return '\n'.join((header, content, footer))
         else:
             return content
-    
+
     def create_row(self, line, indent):
         """Creates a row based on `line` content"""
         return r'{indent}{indent}{content} \\'.format(
@@ -173,14 +173,14 @@ class Tably:
              content=' & '.join(self.tex_str(line)))
 
     def combine_tables(self):
-        """Combine all tables together and add a preamble if required
-        
+        """Combine all tables together and add a preamble if required.
+
         Unless -oo is specified, this is how input tables are arranged.
         """
         all_tables = []
         if self.label and len(self.files) > 1:
             all_tables.append("% don't forget to manually re-label the tables")
-        
+
         for file in self.files:
             table = self.create_table(file)
             if table:
@@ -279,7 +279,7 @@ def save_content(content, outfile, replace):
         with open(outfile, 'a') as out:
             out.writelines(content)
         print('The content is appended to', outfile)
-    
+
 
 
 def arg_parser():
